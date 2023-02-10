@@ -63,6 +63,7 @@ class QTextEdit;
 class QTextCharFormat;
 class QMenu;
 class QPrinter;
+class QTextDocument;
 QT_END_NAMESPACE
 
 class TextEdit : public QMainWindow
@@ -73,6 +74,8 @@ public:
     TextEdit(QWidget *parent = 0);
 
     bool load(const QString &f);
+
+    QTextDocument* document();
 
 public slots:
     void fileNew();

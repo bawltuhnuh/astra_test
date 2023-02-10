@@ -54,6 +54,74 @@
 #include <QCommandLineParser>
 #include <QCommandLineOption>
 #include <QScreen>
+#include <QObject>
+#include <QLocalServer>
+#include <QLocalSocket>
+
+class LocalServer : public QObject
+{
+    Q_OBJECT
+public:
+    LocalServer(const QString& name, TextEdit& text_edit, QObject* parent = nullptr) :
+        QObject(parent),
+        m_textEdit(text_edit)
+    {
+        connect(&m_server, &QLocalServer::newConnection, this, &LocalServer::newConnection);
+        m_server.listen(name);
+    }
+
+    ~LocalServer()
+    {
+
+        m_server.close();
+    }
+
+private slots:
+
+    void newConnection()
+    {
+        while (m_server.hasPendingConnections())
+        {
+            QLocalSocket* socket = m_server.nextPendingConnection();
+            connect(socket, &QLocalSocket::readyRead, this, &LocalServer::readyRead);
+            connect(socket, &QLocalSocket::errorOccurred, this, &LocalServer::socketError);
+            m_sockets.push_back(socket);
+            sendBodyToNewbie();
+        }
+    }
+
+    void readyRead()
+    {
+
+    }
+
+    void serverError()
+    {
+
+    }
+
+    void socketError()
+    {
+
+    }
+
+private:
+    void passServerRole()
+    {
+
+    }
+
+    void sendBodyToNewbie()
+    {
+        QLocalS
+    }
+
+private:
+    QLocalServer m_server;
+    QVector<QLocalSocket*> m_sockets;
+
+    TextEdit& m_textEdit;
+};
 
 int main(int argc, char *argv[])
 {
@@ -70,6 +138,8 @@ int main(int argc, char *argv[])
     parser.addPositionalArgument("file", "The file to open.");
     parser.process(a);
 
+    QString file_name = parser.positionalArguments().value(0);
+
     TextEdit mw;
 
     const QRect availableGeometry = mw.screen()->availableGeometry();
@@ -77,9 +147,22 @@ int main(int argc, char *argv[])
     mw.move((availableGeometry.width() - mw.width()) / 2,
             (availableGeometry.height() - mw.height()) / 2);
 
-    if (!mw.load(parser.positionalArguments().value(0, QLatin1String(":/example.html"))))
-        mw.fileNew();
+    QLocalServer server;
+    if (server.listen(file_name))
+    {
+        if (!mw.load(file_name))
+            mw.fileNew();
 
-    mw.show();
+        mw.show();
+    } else
+    {
+        QLocalSocket socket;
+        socket.connectToServer(file_name);
+
+    }
+
+
+
+
     return a.exec();
 }

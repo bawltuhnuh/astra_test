@@ -437,6 +437,11 @@ bool TextEdit::load(const QString &f)
     return true;
 }
 
+QTextDocument* TextEdit::document()
+{
+    return textEdit->document();
+}
+
 bool TextEdit::maybeSave()
 {
     if (!textEdit->document()->isModified())
