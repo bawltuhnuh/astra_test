@@ -106,6 +106,7 @@ TextEdit::TextEdit(QWidget *parent)
             this, &TextEdit::currentCharFormatChanged);
     connect(textEdit, &QTextEdit::cursorPositionChanged,
             this, &TextEdit::cursorPositionChanged);
+    connect(textEdit->document(), &QTextDocument::contentsChange, this, &TextEdit::documentChanged);
     setCentralWidget(textEdit);
 
     setToolButtonStyle(Qt::ToolButtonFollowStyle);
@@ -435,6 +436,12 @@ bool TextEdit::load(const QString &f)
 
     setCurrentFileName(f);
     return true;
+}
+
+void TextEdit::loadPlainData(const QByteArray& data)
+{
+    textEdit->setPlainText(QString::fromUtf8(data));
+    setCurrentFileName(QString());
 }
 
 QTextDocument* TextEdit::document()

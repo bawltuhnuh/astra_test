@@ -1,12 +1,14 @@
-QT += widgets
+QT += widgets network
 requires(qtConfig(filedialog))
 qtHaveModule(printsupport): QT += printsupport
 
 TEMPLATE        = app
 TARGET          = textedit
 
-HEADERS         = textedit.h
+HEADERS         = textedit.h \
+    localserver.h
 SOURCES         = textedit.cpp \
+                  localserver.cpp \
                   main.cpp
 
 RESOURCES += textedit.qrc

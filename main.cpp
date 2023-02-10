@@ -49,79 +49,13 @@
 ****************************************************************************/
 
 #include "textedit.h"
+#include "localserver.h"
 
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QCommandLineOption>
 #include <QScreen>
-#include <QObject>
-#include <QLocalServer>
-#include <QLocalSocket>
 
-class LocalServer : public QObject
-{
-    Q_OBJECT
-public:
-    LocalServer(const QString& name, TextEdit& text_edit, QObject* parent = nullptr) :
-        QObject(parent),
-        m_textEdit(text_edit)
-    {
-        connect(&m_server, &QLocalServer::newConnection, this, &LocalServer::newConnection);
-        m_server.listen(name);
-    }
-
-    ~LocalServer()
-    {
-
-        m_server.close();
-    }
-
-private slots:
-
-    void newConnection()
-    {
-        while (m_server.hasPendingConnections())
-        {
-            QLocalSocket* socket = m_server.nextPendingConnection();
-            connect(socket, &QLocalSocket::readyRead, this, &LocalServer::readyRead);
-            connect(socket, &QLocalSocket::errorOccurred, this, &LocalServer::socketError);
-            m_sockets.push_back(socket);
-            sendBodyToNewbie();
-        }
-    }
-
-    void readyRead()
-    {
-
-    }
-
-    void serverError()
-    {
-
-    }
-
-    void socketError()
-    {
-
-    }
-
-private:
-    void passServerRole()
-    {
-
-    }
-
-    void sendBodyToNewbie()
-    {
-        QLocalS
-    }
-
-private:
-    QLocalServer m_server;
-    QVector<QLocalSocket*> m_sockets;
-
-    TextEdit& m_textEdit;
-};
 
 int main(int argc, char *argv[])
 {
@@ -147,22 +81,7 @@ int main(int argc, char *argv[])
     mw.move((availableGeometry.width() - mw.width()) / 2,
             (availableGeometry.height() - mw.height()) / 2);
 
-    QLocalServer server;
-    if (server.listen(file_name))
-    {
-        if (!mw.load(file_name))
-            mw.fileNew();
-
-        mw.show();
-    } else
-    {
-        QLocalSocket socket;
-        socket.connectToServer(file_name);
-
-    }
-
-
-
+    LocalServer server(mw, file_name);
 
     return a.exec();
 }

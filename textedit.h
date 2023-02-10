@@ -75,10 +75,17 @@ public:
 
     bool load(const QString &f);
 
+    void loadPlainData(const QByteArray& data);
+
     QTextDocument* document();
+
+
 
 public slots:
     void fileNew();
+
+signals:
+    void documentChanged(int position, int charRemoved, int charAdded);
 
 protected:
     void closeEvent(QCloseEvent *e) override;
