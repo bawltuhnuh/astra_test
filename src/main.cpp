@@ -48,115 +48,59 @@
 **
 ****************************************************************************/
 
-#ifndef TEXTEDIT_H
-#define TEXTEDIT_H
+#include "textedit.h"
+#include "localserver.h"
 
-#include <QMainWindow>
-#include <QMap>
-#include <QPointer>
+#include <QApplication>
+#include <QCommandLineParser>
+#include <QCommandLineOption>
+#include <QScreen>
 
-QT_BEGIN_NAMESPACE
-class QAction;
-class QComboBox;
-class QFontComboBox;
-class QTextEdit;
-class QTextCharFormat;
-class QMenu;
-class QPrinter;
-class QTextDocument;
-QT_END_NAMESPACE
 
-class TextEdit : public QMainWindow
+int main(int argc, char *argv[])
 {
-    Q_OBJECT
+    Q_INIT_RESOURCE(textedit);
 
-public:
-    TextEdit(QWidget *parent = 0);
+    QApplication a(argc, argv);
 
-    bool load(const QString &f);
+    QCoreApplication::setOrganizationName("QtProject");
+    QCoreApplication::setApplicationName("Rich Text");
+    QCoreApplication::setApplicationVersion(QT_VERSION_STR);
+    QCommandLineParser parser;
+    parser.setApplicationDescription(QCoreApplication::applicationName());
+    parser.addHelpOption();
+    parser.addVersionOption();
+    parser.addPositionalArgument("file", "The file to open.");
+    QCommandLineOption detach_option("detach", "Detach mode");
+    parser.addOption(detach_option);
+    QCommandLineOption named_session_option({"session", "s"}, "Start named session with <name>", "name");
+    parser.addOption(named_session_option);
+    parser.process(a);
 
-    void loadPlainData(const QByteArray& data);
+    QString file_name = parser.positionalArguments().value(0);
 
-    QTextDocument* document();
+    TextEdit mw;
 
+    const QRect availableGeometry = mw.screen()->availableGeometry();
+    mw.resize(availableGeometry.width() / 2, (availableGeometry.height() * 2) / 3);
+    mw.move((availableGeometry.width() - mw.width()) / 2,
+            (availableGeometry.height() - mw.height()) / 2);
 
+    if (!mw.load(file_name))
+    {
+        mw.fileNew();
+    }
 
-public slots:
-    void fileNew();
+    QScopedPointer<LocalServer> server;
 
-signals:
-    void documentChanged(int position, int charRemoved, int charAdded);
+    if (!parser.isSet(detach_option))
+    {
+        QString session_name = parser.isSet(named_session_option) ? parser.value(named_session_option) : QString("default");
+        qDebug() << session_name;
+        server.reset(new LocalServer(mw, session_name, new JsonSerializer, new JsonDeserializer));
+    }
 
-protected:
-    void closeEvent(QCloseEvent *e) override;
+    mw.show();
 
-private slots:
-    void fileOpen();
-    bool fileSave();
-    bool fileSaveAs();
-    void filePrint();
-    void filePrintPreview();
-    void filePrintPdf();
-
-    void textBold();
-    void textUnderline();
-    void textItalic();
-    void textFamily(const QString &f);
-    void textSize(const QString &p);
-    void textStyle(int styleIndex);
-    void textColor();
-    void textAlign(QAction *a);
-    void setChecked(bool checked);
-    void indent();
-    void unindent();
-
-    void currentCharFormatChanged(const QTextCharFormat &format);
-    void cursorPositionChanged();
-
-    void clipboardDataChanged();
-    void about();
-    void printPreview(QPrinter *);
-
-private:
-    void setupFileActions();
-    void setupEditActions();
-    void setupTextActions();
-    bool maybeSave();
-    void setCurrentFileName(const QString &fileName);
-    void modifyIndentation(int amount);
-
-    void mergeFormatOnWordOrSelection(const QTextCharFormat &format);
-    void fontChanged(const QFont &f);
-    void colorChanged(const QColor &c);
-    void alignmentChanged(Qt::Alignment a);
-
-    QAction *actionSave;
-    QAction *actionTextBold;
-    QAction *actionTextUnderline;
-    QAction *actionTextItalic;
-    QAction *actionTextColor;
-    QAction *actionAlignLeft;
-    QAction *actionAlignCenter;
-    QAction *actionAlignRight;
-    QAction *actionAlignJustify;
-    QAction *actionIndentLess;
-    QAction *actionIndentMore;
-    QAction *actionToggleCheckState;
-    QAction *actionUndo;
-    QAction *actionRedo;
-#ifndef QT_NO_CLIPBOARD
-    QAction *actionCut;
-    QAction *actionCopy;
-    QAction *actionPaste;
-#endif
-
-    QComboBox *comboStyle;
-    QFontComboBox *comboFont;
-    QComboBox *comboSize;
-
-    QToolBar *tb;
-    QString fileName;
-    QTextEdit *textEdit;
-};
-
-#endif // TEXTEDIT_H
+    return a.exec();
+}

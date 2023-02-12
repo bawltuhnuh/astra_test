@@ -106,7 +106,7 @@ TextEdit::TextEdit(QWidget *parent)
             this, &TextEdit::currentCharFormatChanged);
     connect(textEdit, &QTextEdit::cursorPositionChanged,
             this, &TextEdit::cursorPositionChanged);
-    connect(textEdit->document(), &QTextDocument::contentsChange, this, &TextEdit::documentChanged);
+    connect(textEdit->document(), &QTextDocument::contentsChange, this, &TextEdit::contentsChange);
     setCentralWidget(textEdit);
 
     setToolButtonStyle(Qt::ToolButtonFollowStyle);
@@ -267,7 +267,9 @@ void TextEdit::setupTextActions()
     QMenu *menu = menuBar()->addMenu(tr("F&ormat"));
 
     const QIcon boldIcon = QIcon::fromTheme("format-text-bold", QIcon(rsrcPath + "/textbold.png"));
-    actionTextBold = menu->addAction(boldIcon, tr("&Bold"), this, &TextEdit::textBold);
+    actionTextBold = menu->addAction(boldIcon, tr("&Bold"));
+    //connect(actionTextBold, &QAction::triggered, this, &TextEdit::sendBoldInfo);
+    connect(actionTextBold, &QAction::triggered, this, &TextEdit::textBold);
     actionTextBold->setShortcut(Qt::CTRL + Qt::Key_B);
     actionTextBold->setPriority(QAction::LowPriority);
     QFont bold;
@@ -438,15 +440,19 @@ bool TextEdit::load(const QString &f)
     return true;
 }
 
-void TextEdit::loadPlainData(const QByteArray& data)
+void TextEdit::loadExternalData(const QString& data)
 {
-    textEdit->setPlainText(QString::fromUtf8(data));
-    setCurrentFileName(QString());
+    textEdit->setHtml(data);
 }
 
 QTextDocument* TextEdit::document()
 {
     return textEdit->document();
+}
+
+void TextEdit::externalTextStyle(int styleIndex)
+{
+    textStyle(styleIndex);
 }
 
 bool TextEdit::maybeSave()
@@ -615,6 +621,7 @@ void TextEdit::textBold()
     QTextCharFormat fmt;
     fmt.setFontWeight(actionTextBold->isChecked() ? QFont::Bold : QFont::Normal);
     mergeFormatOnWordOrSelection(fmt);
+    //sendBoldInfo();
 }
 
 void TextEdit::textUnderline()
@@ -651,6 +658,7 @@ void TextEdit::textSize(const QString &p)
 void TextEdit::textStyle(int styleIndex)
 {
     QTextCursor cursor = textEdit->textCursor();
+    emit styleChanged(styleIndex, cursor.position());
     QTextListFormat::Style style = QTextListFormat::ListStyleUndefined;
     QTextBlockFormat::MarkerType marker = QTextBlockFormat::MarkerType::NoMarker;
 
@@ -873,12 +881,14 @@ void TextEdit::mergeFormatOnWordOrSelection(const QTextCharFormat &format)
     QTextCursor cursor = textEdit->textCursor();
     if (!cursor.hasSelection())
         cursor.select(QTextCursor::WordUnderCursor);
-    cursor.mergeCharFormat(format);
+    //cursor.mergeCharFormat(format);
+    textEdit->setTextCursor(cursor);
     textEdit->mergeCurrentCharFormat(format);
 }
 
 void TextEdit::fontChanged(const QFont &f)
 {
+    qDebug() << __FUNCTION__ << f.bold();
     comboFont->setCurrentIndex(comboFont->findText(QFontInfo(f).family()));
     comboSize->setCurrentIndex(comboSize->findText(QString::number(f.pointSize())));
     actionTextBold->setChecked(f.bold());
