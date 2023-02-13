@@ -54,6 +54,7 @@
 #include <QMainWindow>
 #include <QMap>
 #include <QPointer>
+#include <QTextListFormat>
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -92,7 +93,13 @@ public:
 
     QTextDocument* document();
 
-    void externalTextStyle(int styleIndex);
+    void externalTextStyleByIndex(int styleIndex);
+
+    void externalTextStyleByName(QTextListFormat::Style style, QTextBlockFormat::MarkerType marker);
+
+    QTextListFormat::Style getStyle();
+
+    QTextBlockFormat::MarkerType getMarker();
 
 public slots:
     void fileNew();

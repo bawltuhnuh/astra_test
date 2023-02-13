@@ -13,7 +13,6 @@
 #include <QTextCursor>
 #include <QEventLoop>
 
-//template <typename MessageHandler>
 class LocalServer : public QObject
 {
     Q_OBJECT
@@ -41,9 +40,6 @@ public:
         static const QString NONE;
     };
 
-
-    //template <typename Handler>
-    //LocalServer(TextEdit& text_edit, const QString& name, Handler&& handler, QObject* parent = nullptr) :
     LocalServer(TextEdit& text_edit, const QString& name, ISerializer* serializer, IDeserializer* deserializer, QObject* parent = nullptr);
 
     ~LocalServer();

@@ -153,7 +153,7 @@ void LocalServer::handleMessage(QLocalSocket* editing_socket, const QByteArray &
             disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
             QTextCursor cursor(m_textEdit.document());
             cursor.setPosition(map[MessageField::POSITION].toInt());
-            m_textEdit.externalTextStyle(map[MessageField::VALUE].toInt());
+            m_textEdit.externalTextStyleByIndex(map[MessageField::VALUE].toInt());
             connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
         }
         }
@@ -201,9 +201,13 @@ void LocalServer::applyTextChangesToDocument(const QVariantMap& map)
     disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
 
     QTextCursor cursor(m_textEdit.document());
+
     cursor.beginEditBlock();
     cursor.setPosition(position);
 
+    QTextListFormat::Style style = m_textEdit.getStyle();
+    QTextBlockFormat::MarkerType marker = m_textEdit.getMarker();
+    m_textEdit.externalTextStyleByName(QTextListFormat::ListStyleUndefined, QTextBlockFormat::MarkerType::NoMarker);
     for (int i = 0; i < removed; ++i)
     {
         cursor.deleteChar();
@@ -213,7 +217,7 @@ void LocalServer::applyTextChangesToDocument(const QVariantMap& map)
     {
         cursor.insertFragment(QTextDocumentFragment::fromHtml(added));
     }
-
+    m_textEdit.externalTextStyleByName(style, marker);
     cursor.endEditBlock();
 
     connect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
@@ -243,8 +247,13 @@ void LocalServer::contentsChange(int position, int charRemoved, int charAdded)
     {
         QTextCursor cursor(m_textEdit.document());
         cursor.setPosition(position, QTextCursor::MoveAnchor);
+        QTextListFormat::Style style = m_textEdit.getStyle();
+        QTextBlockFormat::MarkerType marker = m_textEdit.getMarker();
+        m_textEdit.externalTextStyleByName(QTextListFormat::ListStyleUndefined, QTextBlockFormat::MarkerType::NoMarker);
         cursor.setPosition(position + charAdded, QTextCursor::KeepAnchor);
         added_text = cursor.selection().toHtml();
+        cursor.setPosition(position, QTextCursor::MoveAnchor);
+        m_textEdit.externalTextStyleByName(style, marker);
     }
 
     if (added_text.isEmpty())

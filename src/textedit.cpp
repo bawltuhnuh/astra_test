@@ -450,9 +450,62 @@ QTextDocument* TextEdit::document()
     return textEdit->document();
 }
 
-void TextEdit::externalTextStyle(int styleIndex)
+void TextEdit::externalTextStyleByIndex(int styleIndex)
 {
     textStyle(styleIndex);
+}
+
+void TextEdit::externalTextStyleByName(QTextListFormat::Style style, QTextBlockFormat::MarkerType marker)
+{
+    QTextCursor cursor = textEdit->textCursor();
+    cursor.beginEditBlock();
+
+    QTextBlockFormat blockFmt = cursor.blockFormat();
+
+    if (style == QTextListFormat::ListStyleUndefined) {
+        blockFmt.setObjectIndex(-1);
+        int headingLevel = 0; // H1 to H6, or Standard
+        blockFmt.setHeadingLevel(headingLevel);
+        cursor.setBlockFormat(blockFmt);
+
+        int sizeAdjustment = headingLevel ? 4 - headingLevel : 0; // H1 to H6: +3 to -2
+        QTextCharFormat fmt;
+        fmt.setFontWeight(headingLevel ? QFont::Bold : QFont::Normal);
+        fmt.setProperty(QTextFormat::FontSizeAdjustment, sizeAdjustment);
+        cursor.select(QTextCursor::LineUnderCursor);
+        cursor.mergeCharFormat(fmt);
+        textEdit->mergeCurrentCharFormat(fmt);
+    } else {
+        blockFmt.setMarker(marker);
+        cursor.setBlockFormat(blockFmt);
+        QTextListFormat listFmt;
+        if (cursor.currentList()) {
+            listFmt = cursor.currentList()->format();
+        } else {
+            listFmt.setIndent(blockFmt.indent() + 1);
+            blockFmt.setIndent(0);
+            cursor.setBlockFormat(blockFmt);
+        }
+        listFmt.setStyle(style);
+        cursor.createList(listFmt);
+    }
+    cursor.endEditBlock();
+}
+
+QTextListFormat::Style TextEdit::getStyle()
+{
+    QTextCursor cursor = textEdit->textCursor();
+    QTextListFormat listFmt;
+    if (cursor.currentList()) {
+        listFmt = cursor.currentList()->format();
+    }
+    return listFmt.style();
+}
+
+QTextBlockFormat::MarkerType TextEdit::getMarker()
+{
+    QTextCursor cursor = textEdit->textCursor();
+    return cursor.blockFormat().marker();
 }
 
 bool TextEdit::maybeSave()
