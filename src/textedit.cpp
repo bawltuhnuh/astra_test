@@ -107,6 +107,7 @@ TextEdit::TextEdit(QWidget *parent)
     connect(textEdit, &QTextEdit::cursorPositionChanged,
             this, &TextEdit::cursorPositionChanged);
     connect(textEdit->document(), &QTextDocument::contentsChange, this, &TextEdit::contentsChange);
+
     setCentralWidget(textEdit);
 
     setToolButtonStyle(Qt::ToolButtonFollowStyle);
@@ -450,62 +451,19 @@ QTextDocument* TextEdit::document()
     return textEdit->document();
 }
 
-void TextEdit::externalTextStyleByIndex(int styleIndex)
+void TextEdit::externalSetTextStyleByIndex(int styleIndex)
 {
-    textStyle(styleIndex);
+    customTextStyle(styleIndex);
 }
 
-void TextEdit::externalTextStyleByName(QTextListFormat::Style style, QTextBlockFormat::MarkerType marker)
+void TextEdit::externalMergeTextStyleByIndex(int styleIndex)
 {
-    QTextCursor cursor = textEdit->textCursor();
-    cursor.beginEditBlock();
-
-    QTextBlockFormat blockFmt = cursor.blockFormat();
-
-    if (style == QTextListFormat::ListStyleUndefined) {
-        blockFmt.setObjectIndex(-1);
-        int headingLevel = 0; // H1 to H6, or Standard
-        blockFmt.setHeadingLevel(headingLevel);
-        cursor.setBlockFormat(blockFmt);
-
-        int sizeAdjustment = headingLevel ? 4 - headingLevel : 0; // H1 to H6: +3 to -2
-        QTextCharFormat fmt;
-        fmt.setFontWeight(headingLevel ? QFont::Bold : QFont::Normal);
-        fmt.setProperty(QTextFormat::FontSizeAdjustment, sizeAdjustment);
-        cursor.select(QTextCursor::LineUnderCursor);
-        cursor.mergeCharFormat(fmt);
-        textEdit->mergeCurrentCharFormat(fmt);
-    } else {
-        blockFmt.setMarker(marker);
-        cursor.setBlockFormat(blockFmt);
-        QTextListFormat listFmt;
-        if (cursor.currentList()) {
-            listFmt = cursor.currentList()->format();
-        } else {
-            listFmt.setIndent(blockFmt.indent() + 1);
-            blockFmt.setIndent(0);
-            cursor.setBlockFormat(blockFmt);
-        }
-        listFmt.setStyle(style);
-        cursor.createList(listFmt);
-    }
-    cursor.endEditBlock();
+    customTextStyle(styleIndex, true);
 }
 
-QTextListFormat::Style TextEdit::getStyle()
+int TextEdit::getStyle()
 {
-    QTextCursor cursor = textEdit->textCursor();
-    QTextListFormat listFmt;
-    if (cursor.currentList()) {
-        listFmt = cursor.currentList()->format();
-    }
-    return listFmt.style();
-}
-
-QTextBlockFormat::MarkerType TextEdit::getMarker()
-{
-    QTextCursor cursor = textEdit->textCursor();
-    return cursor.blockFormat().marker();
+    return comboStyle->currentIndex();
 }
 
 bool TextEdit::maybeSave()
@@ -710,6 +668,11 @@ void TextEdit::textSize(const QString &p)
 
 void TextEdit::textStyle(int styleIndex)
 {
+    customTextStyle(styleIndex, false);
+}
+
+void TextEdit::customTextStyle(int styleIndex, bool merge)
+{
     QTextCursor cursor = textEdit->textCursor();
     emit styleChanged(styleIndex, cursor.position());
     QTextListFormat::Style style = QTextListFormat::ListStyleUndefined;
@@ -768,23 +731,38 @@ void TextEdit::textStyle(int styleIndex)
         blockFmt.setHeadingLevel(headingLevel);
         cursor.setBlockFormat(blockFmt);
 
-        int sizeAdjustment = headingLevel ? 4 - headingLevel : 0; // H1 to H6: +3 to -2
-        QTextCharFormat fmt;
-        fmt.setFontWeight(headingLevel ? QFont::Bold : QFont::Normal);
-        fmt.setProperty(QTextFormat::FontSizeAdjustment, sizeAdjustment);
-        cursor.select(QTextCursor::LineUnderCursor);
-        cursor.mergeCharFormat(fmt);
-        textEdit->mergeCurrentCharFormat(fmt);
+        if (!merge)
+        {
+            int sizeAdjustment = headingLevel ? 4 - headingLevel : 0; // H1 to H6: +3 to -2
+            QTextCharFormat fmt;
+            fmt.setFontWeight(headingLevel ? QFont::Bold : QFont::Normal);
+            fmt.setProperty(QTextFormat::FontSizeAdjustment, sizeAdjustment);
+            cursor.select(QTextCursor::LineUnderCursor);
+            cursor.mergeCharFormat(fmt);
+            textEdit->mergeCurrentCharFormat(fmt);
+        }
     } else {
         blockFmt.setMarker(marker);
-        cursor.setBlockFormat(blockFmt);
+        //if (merge)
+        //{
+        //    cursor.mergeBlockFormat(blockFmt);
+        //} else
+        //{
+            cursor.setBlockFormat(blockFmt);
+        //}
         QTextListFormat listFmt;
         if (cursor.currentList()) {
             listFmt = cursor.currentList()->format();
         } else {
             listFmt.setIndent(blockFmt.indent() + 1);
             blockFmt.setIndent(0);
-            cursor.setBlockFormat(blockFmt);
+            //if (merge)
+            //{
+            //    cursor.mergeBlockFormat(blockFmt);
+            //} else
+            //{
+                cursor.setBlockFormat(blockFmt);
+            //}
         }
         listFmt.setStyle(style);
         cursor.createList(listFmt);

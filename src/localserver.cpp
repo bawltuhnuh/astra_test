@@ -155,7 +155,7 @@ void LocalServer::handleMessage(QLocalSocket* editing_socket, const QByteArray &
             disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
             QTextCursor cursor(m_textEdit.document());
             cursor.setPosition(map[MessageField::POSITION].toInt());
-            m_textEdit.externalTextStyleByIndex(map[MessageField::VALUE].toInt());
+            m_textEdit.externalSetTextStyleByIndex(map[MessageField::VALUE].toInt());
             connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
         }
         }
@@ -206,18 +206,17 @@ void LocalServer::applyTextChangesToDocument(const QVariantMap& map)
 
     disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
 
-    QTextDocument* document = m_textEdit.document();
-
-    qDebug() << document->blockCount();
-
     QTextCursor cursor(m_textEdit.document());
 
     cursor.beginEditBlock();
     cursor.setPosition(position);
 
-    QTextListFormat::Style style = m_textEdit.getStyle();
-    QTextBlockFormat::MarkerType marker = m_textEdit.getMarker();
-    m_textEdit.externalTextStyleByName(QTextListFormat::ListStyleUndefined, QTextBlockFormat::MarkerType::NoMarker);
+    int style = m_textEdit.getStyle();
+
+    disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+    m_textEdit.externalMergeTextStyleByIndex(0);
+    connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+
     for (int i = 0; i < removed; ++i)
     {
         cursor.deleteChar();
@@ -227,7 +226,10 @@ void LocalServer::applyTextChangesToDocument(const QVariantMap& map)
     {
         cursor.insertFragment(QTextDocumentFragment::fromHtml(added));
     }
-    m_textEdit.externalTextStyleByName(style, marker);
+
+    disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+    m_textEdit.externalMergeTextStyleByIndex(style);
+    connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
 
     cursor.endEditBlock();
 
@@ -253,19 +255,30 @@ void LocalServer::sendData(const QByteArray &data)
 void LocalServer::contentsChange(int position, int charRemoved, int charAdded)
 {
     QString added_text = MessageValue::NONE;
+
     disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
     if (charAdded)
     {
-
         QTextCursor cursor(m_textEdit.document());
-        QTextDocument* document = m_textEdit.document();
-        cursor.setPosition(position, QTextCursor::MoveAnchor);
-        QTextListFormat::Style style = m_textEdit.getStyle();
-        QTextBlockFormat::MarkerType marker = m_textEdit.getMarker();
-        m_textEdit.externalTextStyleByName(QTextListFormat::ListStyleUndefined, QTextBlockFormat::MarkerType::NoMarker);
+        cursor.setPosition(position);
+        int style = m_textEdit.getStyle();
+
+        if (style != 0)
+        {
+            disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+            m_textEdit.externalMergeTextStyleByIndex(0);
+            connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+        }
+
         cursor.setPosition(position + charAdded, QTextCursor::KeepAnchor);
         added_text = cursor.selection().toHtml();
-        m_textEdit.externalTextStyleByName(style, marker);
+
+        if (style != 0)
+        {
+            disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+            m_textEdit.externalMergeTextStyleByIndex(style);
+            connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+        }
     }
 
     if (added_text.isEmpty())

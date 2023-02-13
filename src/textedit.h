@@ -80,13 +80,11 @@ public:
 
     QTextDocument* document();
 
-    void externalTextStyleByIndex(int styleIndex);
+    void externalSetTextStyleByIndex(int styleIndex);
 
-    void externalTextStyleByName(QTextListFormat::Style style, QTextBlockFormat::MarkerType marker);
+    void externalMergeTextStyleByIndex(int styleIndex);
 
-    QTextListFormat::Style getStyle();
-
-    QTextBlockFormat::MarkerType getMarker();
+    int getStyle();
 
 public slots:
     void fileNew();
@@ -137,6 +135,8 @@ private:
     void fontChanged(const QFont &f);
     void colorChanged(const QColor &c);
     void alignmentChanged(Qt::Alignment a);
+
+    void customTextStyle(int styleIndex, bool merge = false);
 
     QAction *actionSave;
     QAction *actionTextBold;
