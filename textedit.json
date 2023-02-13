@@ -1,0 +1,31 @@
+{
+    "name": "textedit",
+    "targetDir": "./Install",
+    "force-clear": true,
+    "clear": true,
+    "qmake": "qmake",
+    "allowEmptyPackage": true,
+    "libDir": "./",
+    "binPrefix": "./",
+    "noStrip": true,
+    "bin": 
+    [ 
+        "textedit"
+    ],
+    "binOut": "/",
+
+    "extraData":
+    [
+    ],
+
+    "deploySystem": true,
+    "noTranslations": true,
+
+    "qif": false,
+    "deb": true,
+    "qifOut": "textedit-1.0.1-astra",
+    "debOut": "textedit-1.0.1-astra.deb",
+    "deployVersion": "1.0.1",
+    "installDirQIFW": "/opt"
+}
+
