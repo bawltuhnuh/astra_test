@@ -31,8 +31,9 @@ class JsonDeserializer : public IDeserializer
 {
 public:
     QList<QVariantMap> Process(const QByteArray& data) override;
-    QVariantMap ProcessOne(const QByteArray& data) override;
     ~JsonDeserializer(){}
+private:
+    QVariantMap ProcessOne(const QByteArray& data) override;
 };
 
 #endif // SERIALIZATION_H

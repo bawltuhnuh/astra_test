@@ -1,6 +1,7 @@
 #include "localserver.h"
 
 #include <QTextDocumentFragment>
+#include <QTextBlock>
 
 const QString LocalServer::MessageField::TYPE = "type";
 const QString LocalServer::MessageField::POSITION = "position";
@@ -35,6 +36,7 @@ LocalServer::LocalServer(TextEdit& text_edit, const QString& name, ISerializer* 
 LocalServer::~LocalServer()
 {
     disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
+    disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
     if (m_serverMode)
     {
         m_server.close();
@@ -179,6 +181,10 @@ void LocalServer::passServerRole()
         m_sockets[i]->write(down_message);
         m_sockets[i]->flush();
     }
+    for (auto& socket : m_sockets)
+    {
+        delete socket;
+    }
 }
 
 void LocalServer::sendBodyToNewbie()
@@ -200,6 +206,10 @@ void LocalServer::applyTextChangesToDocument(const QVariantMap& map)
 
     disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
 
+    QTextDocument* document = m_textEdit.document();
+
+    qDebug() << document->blockCount();
+
     QTextCursor cursor(m_textEdit.document());
 
     cursor.beginEditBlock();
@@ -218,6 +228,7 @@ void LocalServer::applyTextChangesToDocument(const QVariantMap& map)
         cursor.insertFragment(QTextDocumentFragment::fromHtml(added));
     }
     m_textEdit.externalTextStyleByName(style, marker);
+
     cursor.endEditBlock();
 
     connect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
@@ -245,14 +256,15 @@ void LocalServer::contentsChange(int position, int charRemoved, int charAdded)
     disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
     if (charAdded)
     {
+
         QTextCursor cursor(m_textEdit.document());
+        QTextDocument* document = m_textEdit.document();
         cursor.setPosition(position, QTextCursor::MoveAnchor);
         QTextListFormat::Style style = m_textEdit.getStyle();
         QTextBlockFormat::MarkerType marker = m_textEdit.getMarker();
         m_textEdit.externalTextStyleByName(QTextListFormat::ListStyleUndefined, QTextBlockFormat::MarkerType::NoMarker);
         cursor.setPosition(position + charAdded, QTextCursor::KeepAnchor);
         added_text = cursor.selection().toHtml();
-        cursor.setPosition(position, QTextCursor::MoveAnchor);
         m_textEdit.externalTextStyleByName(style, marker);
     }
 

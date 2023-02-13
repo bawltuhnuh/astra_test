@@ -67,19 +67,6 @@ class QPrinter;
 class QTextDocument;
 QT_END_NAMESPACE
 
-enum Property
-{
-    kBold, //bool
-    kUnderline, //bool
-    kFamily, //text
-    kItalic, //bool
-    kSize, //numeric
-    kStyle, //numeric
-    kColor, //text
-    kAlign, //numeric
-    kIndent, //numeric
-};
-
 class TextEdit : public QMainWindow
 {
     Q_OBJECT

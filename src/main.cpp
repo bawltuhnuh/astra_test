@@ -59,6 +59,7 @@
 #include <QScreen>
 
 void catchUnixSignals(std::initializer_list<int> quitSignals) {
+
     auto handler = [](int sig) -> void {
         QCoreApplication::quit();
     };
@@ -75,6 +76,7 @@ void catchUnixSignals(std::initializer_list<int> quitSignals) {
 
     for (auto sig : quitSignals)
         sigaction(sig, &sa, nullptr);
+
 }
 
 
@@ -83,7 +85,7 @@ int main(int argc, char *argv[])
     Q_INIT_RESOURCE(textedit);
 
     QApplication a(argc, argv);
-    catchUnixSignals({SIGQUIT, SIGINT, SIGTERM, SIGHUP});
+    catchUnixSignals({SIGINT, SIGTERM, SIGHUP});
 
     QCoreApplication::setOrganizationName("QtProject");
     QCoreApplication::setApplicationName("Rich Text");
