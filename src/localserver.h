@@ -20,10 +20,11 @@ public:
     enum MessageType
     {
         kInit,
-        kTextChanged,
+        kContentChangedWithHtml,
         kRunServer,
         kServerDown,
-        kStyleChanged
+        kStyleChanged,
+        kContentChangedWithPlain
     };
 
     struct MessageField
@@ -33,6 +34,12 @@ public:
         static const QString REMOVED;
         static const QString ADDED;
         static const QString VALUE;
+        static const QString BOLD;
+        static const QString UNDERLINE;
+        static const QString ITALIC;
+        static const QString FAMILY;
+        static const QString SIZE;
+        static const QString COLOR;
     };
 
     struct MessageValue
@@ -60,36 +67,33 @@ private slots:
 private:
     void handleMessage(QLocalSocket* editing_socket, const QByteArray& message);
 
+    void handleInitMessage(const QString& init_data);
+
+    void handleRunServerMessage();
+
+    void handleServerDownMessage();
+
+    void changeContentStyle(const QVariantMap& data);
+
+    void changeContentWithHtml(const QVariantMap& data);
+
+    void sendData(const QByteArray& data);
+
     void passServerRole();
 
     void sendBodyToNewbie();
 
-    void applyTextChangesToDocument(const QVariantMap& data);
-
-    void sendData(const QByteArray& data);
-
 private:
-    struct Change
-    {
-        int position;
-        int charRemoved;
-        int charAdded;
-    };
-
     QLocalServer m_server;
     QLocalSocket m_socket;
 
     QList<QLocalSocket*> m_sockets;
-
-    QList<Change> m_changes;
 
     TextEdit& m_textEdit;
     QString m_name;
 
     QScopedPointer<ISerializer> m_serializer;
     QScopedPointer<IDeserializer> m_deserializer;
-
-    //MessageHandler m_handler;
 
     bool m_serverMode = false;
 };
