@@ -148,6 +148,13 @@ void LocalServer::handleMessage(QLocalSocket* editing_socket, const QByteArray &
                 changeContentStyle(map);
                 break;
             }
+        case MessageType::kReset:
+        {
+            disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
+            m_textEdit.loadExternalData(map[MessageField::ADDED].toString() == MessageValue::NONE ? QString() : map[MessageField::ADDED].toString());
+            connect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
+            break;
+        }
         }
     }
 }
@@ -271,15 +278,25 @@ void LocalServer::sendData(const QByteArray &data)
 void LocalServer::contentsChange(int position, int charRemoved, int charAdded)
 {
     QString added_text = MessageValue::NONE;
-
+    QVariantMap map;
     disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
     if (charAdded)
     {
         QTextCursor cursor(m_textEdit.document());
         cursor.setPosition(position);
         int style = m_textEdit.getStyle();
-        cursor.setPosition(position + charAdded, QTextCursor::KeepAnchor);
-        added_text = cursor.selection().toHtml();
+        if (style != 0)
+        {
+            map[MessageField::TYPE] = kReset;
+            added_text = m_textEdit.document()->toHtml();
+        } else
+        {
+            cursor.setPosition(position + charAdded, QTextCursor::KeepAnchor);
+            added_text = cursor.selection().toHtml();
+            map[MessageField::TYPE] = kContentChangedWithHtml;
+            map[MessageField::POSITION] = position;
+            map[MessageField::REMOVED] = charRemoved;
+        }
     }
 
     if (added_text.isEmpty())
@@ -287,12 +304,8 @@ void LocalServer::contentsChange(int position, int charRemoved, int charAdded)
         connect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
         return;
     }
-
     connect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
-    QVariantMap map;
-    map[MessageField::TYPE] = kContentChangedWithHtml;
-    map[MessageField::POSITION] = position;
-    map[MessageField::REMOVED] = charRemoved;
+
     map[MessageField::ADDED] = added_text;
     sendData(m_serializer->Process(map));
 }

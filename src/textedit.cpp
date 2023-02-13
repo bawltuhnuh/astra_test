@@ -919,7 +919,6 @@ void TextEdit::mergeFormatOnWordOrSelection(const QTextCharFormat &format)
 
 void TextEdit::fontChanged(const QFont &f)
 {
-    qDebug() << __FUNCTION__ << f.bold();
     comboFont->setCurrentIndex(comboFont->findText(QFontInfo(f).family()));
     comboSize->setCurrentIndex(comboSize->findText(QString::number(f.pointSize())));
     actionTextBold->setChecked(f.bold());

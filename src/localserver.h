@@ -24,7 +24,8 @@ public:
         kRunServer,
         kServerDown,
         kStyleChanged,
-        kContentChangedWithPlain
+        kContentChangedWithPlain,
+        kReset
     };
 
     struct MessageField
