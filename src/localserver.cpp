@@ -29,7 +29,6 @@ LocalServer::LocalServer(TextEdit& text_edit, const QString& name, ISerializer* 
     {
         m_serverMode = true;
         connect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
-        connect(m_textEdit.document(), &QTextDocument::contentsChanged, this, &LocalServer::contentsChanged);
         connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
     } else
     {
@@ -109,6 +108,7 @@ void LocalServer::handleMessage(QLocalSocket* editing_socket, const QByteArray &
     {
         return;
     }
+    bool send_out = false;
     for (auto& map : maps)
     {
         int type = map[MessageField::TYPE].toInt();
@@ -122,16 +122,7 @@ void LocalServer::handleMessage(QLocalSocket* editing_socket, const QByteArray &
             case MessageType::kContentChangedWithHtml:
             {
                 changeContentWithHtml(map);
-                if (m_serverMode)
-                {
-                    for (auto& socket : m_sockets)
-                    {
-                        if (socket != editing_socket)
-                        {
-                            socket->write(message);
-                        }
-                    }
-                }
+                send_out = true;
                 break;
             }
             case MessageType::kRunServer:
@@ -147,14 +138,26 @@ void LocalServer::handleMessage(QLocalSocket* editing_socket, const QByteArray &
             case MessageType::kStyleChanged:
             {
                 changeContentStyle(map);
+                send_out = true;
                 break;
             }
             case MessageType::kReset:
             {
+                send_out = true;
                 disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
                 m_textEdit.loadExternalData(map[MessageField::ADDED].toString() == MessageValue::NONE ? QString() : map[MessageField::ADDED].toString());
                 connect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
                 break;
+            }
+        }
+    }
+    if (send_out && m_serverMode)
+    {
+        for (auto& socket : m_sockets)
+        {
+            if (socket != editing_socket)
+            {
+                socket->write(message);
             }
         }
     }
@@ -239,25 +242,17 @@ void LocalServer::changeContentWithHtml(const QVariantMap& map)
     disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
 
     QTextCursor cursor(m_textEdit.document());
-
-    cursor.beginEditBlock();
     cursor.setPosition(position);
 
-    int style = m_textEdit.getStyle();
+    cursor.beginEditBlock();
 
     for (int i = 0; i < removed; ++i)
     {
         cursor.deleteChar();
     }
 
-    if (style != 0)
-    {
-        qDebug() << added;
-    }
-
     if (added != MessageValue::NONE)
     {
-        QString str = QTextDocumentFragment::fromHtml(added).toPlainText();
         cursor.insertFragment(QTextDocumentFragment::fromHtml(added));
     }
 
@@ -287,23 +282,22 @@ void LocalServer::contentsChange(int position, int charRemoved, int charAdded)
     QString added_text = MessageValue::NONE;
     QVariantMap map;
     disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
-    if (change.charAdded)
+    QTextCursor cursor(m_textEdit.document());
+    cursor.setPosition(position);
+    int style = m_textEdit.getStyle();
+    if (style != 0)
     {
-        QTextCursor cursor(m_textEdit.document());
-        cursor.setPosition(change.position);
-        int style = m_textEdit.getStyle();
-
-        if (style != 0)
-        {
-            map[MessageField::TYPE] = kReset;
-            added_text = m_textEdit.document()->toHtml();
-        } else
+        map[MessageField::TYPE] = kReset;
+        added_text =  charAdded ? m_textEdit.document()->toHtml() : added_text;
+    } else
+    {
+        map[MessageField::TYPE] = kContentChangedWithHtml;
+        map[MessageField::POSITION] = position;
+        map[MessageField::REMOVED] = charRemoved;
+        if (charAdded)
         {
             cursor.setPosition(position + charAdded, QTextCursor::KeepAnchor);
             added_text = cursor.selection().toHtml();
-            map[MessageField::TYPE] = kContentChangedWithHtml;
-            map[MessageField::POSITION] = position;
-            map[MessageField::REMOVED] = charRemoved;
         }
     }
 
@@ -312,7 +306,9 @@ void LocalServer::contentsChange(int position, int charRemoved, int charAdded)
         connect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
         return;
     }
+
     connect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
+
     map[MessageField::ADDED] = added_text;
     sendData(m_serializer->Process(map));
 }

@@ -54,7 +54,6 @@ public:
 
 private slots:
     void contentsChange(int position, int charRemoved, int charAdded);
-    void contentsChanged();
 
     void newConnection();
 
