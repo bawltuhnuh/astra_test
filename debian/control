@@ -1,0 +1,11 @@
+Source: textedit
+Section: unknown
+Priority: optional
+Maintainer: Yaroslavceva Alexandra <yaroslavceva_sasha@mail.ru>
+Build-Depends: cmake, debhelper (>= 11), libqt5widgets5, libqt5network5, libqt5widgets5, libqt5core5a, libstdc++6, libc6, libgcc1
+Standards-Version: 4.1.3
+
+Package: textedit
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: <Text editor with one session for several instances>

@@ -23,6 +23,7 @@ LocalServer::LocalServer(TextEdit& text_edit, const QString& name, ISerializer* 
     {
         m_serverMode = true;
         connect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
+        connect(m_textEdit.document(), &QTextDocument::contentsChanged, this, &LocalServer::contentsChanged);
         connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
     } else
     {
@@ -152,10 +153,12 @@ void LocalServer::handleMessage(QLocalSocket* editing_socket, const QByteArray &
             }
         case MessageType::kStyleChanged:
         {
+            //disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
             disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
             QTextCursor cursor(m_textEdit.document());
             cursor.setPosition(map[MessageField::POSITION].toInt());
             m_textEdit.externalSetTextStyleByIndex(map[MessageField::VALUE].toInt());
+            //connect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
             connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
         }
         }
@@ -213,23 +216,33 @@ void LocalServer::applyTextChangesToDocument(const QVariantMap& map)
 
     int style = m_textEdit.getStyle();
 
+/*
     disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
     m_textEdit.externalMergeTextStyleByIndex(0);
     connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+*/
 
     for (int i = 0; i < removed; ++i)
     {
         cursor.deleteChar();
     }
 
+    if (style != 0)
+    {
+        qDebug() << added;
+    }
+
     if (added != MessageValue::NONE)
     {
+        QString str = QTextDocumentFragment::fromHtml(added).toPlainText();
         cursor.insertFragment(QTextDocumentFragment::fromHtml(added));
     }
 
+/*
     disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
     m_textEdit.externalMergeTextStyleByIndex(style);
     connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+*/
 
     cursor.endEditBlock();
 
@@ -254,31 +267,47 @@ void LocalServer::sendData(const QByteArray &data)
 
 void LocalServer::contentsChange(int position, int charRemoved, int charAdded)
 {
-    QString added_text = MessageValue::NONE;
+    m_changes.push_back({position, charRemoved, charAdded});
+}
 
+void LocalServer::contentsChanged()
+{
+    QString added_text = MessageValue::NONE;
+    Change change = m_changes.takeFirst();
     disconnect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
-    if (charAdded)
+    if (change.charAdded)
     {
         QTextCursor cursor(m_textEdit.document());
-        cursor.setPosition(position);
+        cursor.setPosition(change.position);
         int style = m_textEdit.getStyle();
 
+/*
+        disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+        m_textEdit.externalMergeTextStyleByIndex(0);
+        connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+*/
+        //cursor.setPosition(position + charAdded, QTextCursor::KeepAnchor);
+        /*
         if (style != 0)
         {
-            disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
-            m_textEdit.externalMergeTextStyleByIndex(0);
-            connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
-        }
+            cursor.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor, charAdded);
+        } else
+        {
+        */
+            cursor.setPosition(change.position + change.charAdded, QTextCursor::KeepAnchor);
+        //}
 
-        cursor.setPosition(position + charAdded, QTextCursor::KeepAnchor);
-        added_text = cursor.selection().toHtml();
-
+        QString str = cursor.selectedText();
+        added_text = cursor.selection().toHtml("UTF-8");
         if (style != 0)
         {
-            disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
-            m_textEdit.externalMergeTextStyleByIndex(style);
-            connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+            qDebug() << added_text;
         }
+/*
+        disconnect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+        m_textEdit.externalMergeTextStyleByIndex(style);
+        connect(&m_textEdit, &TextEdit::styleChanged, this, &LocalServer::styleChanged);
+*/
     }
 
     if (added_text.isEmpty())
@@ -290,8 +319,8 @@ void LocalServer::contentsChange(int position, int charRemoved, int charAdded)
     connect(&m_textEdit, &TextEdit::contentsChange, this, &LocalServer::contentsChange);
     QVariantMap map;
     map[MessageField::TYPE] = kTextChanged;
-    map[MessageField::POSITION] = position;
-    map[MessageField::REMOVED] = charRemoved;
+    map[MessageField::POSITION] = change.position;
+    map[MessageField::REMOVED] = change.charRemoved;
     map[MessageField::ADDED] = added_text;
     sendData(m_serializer->Process(map));
 }

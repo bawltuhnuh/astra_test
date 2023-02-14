@@ -46,6 +46,7 @@ public:
 
 private slots:
     void contentsChange(int position, int charRemoved, int charAdded);
+    void contentsChanged();
 
     void newConnection();
 
@@ -58,6 +59,7 @@ private slots:
     void styleChanged(int style_index, int position);
 
 private:
+
     void handleMessage(QLocalSocket* editing_socket, const QByteArray& message);
 
     void passServerRole();
