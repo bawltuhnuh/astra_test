@@ -912,14 +912,13 @@ void TextEdit::mergeFormatOnWordOrSelection(const QTextCharFormat &format)
     QTextCursor cursor = textEdit->textCursor();
     if (!cursor.hasSelection())
         cursor.select(QTextCursor::WordUnderCursor);
-    //cursor.mergeCharFormat(format);
-    textEdit->setTextCursor(cursor);
+    cursor.mergeCharFormat(format);
+    //textEdit->setTextCursor(cursor);
     textEdit->mergeCurrentCharFormat(format);
 }
 
 void TextEdit::fontChanged(const QFont &f)
 {
-    qDebug() << __FUNCTION__ << f.bold();
     comboFont->setCurrentIndex(comboFont->findText(QFontInfo(f).family()));
     comboSize->setCurrentIndex(comboSize->findText(QString::number(f.pointSize())));
     actionTextBold->setChecked(f.bold());
